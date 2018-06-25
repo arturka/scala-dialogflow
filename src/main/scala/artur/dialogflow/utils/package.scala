@@ -6,7 +6,6 @@ package object utils {
     def getProjectId: String
   }
 
-
   case class BaseAgentConfigs(projectId: String) extends Configs {
     override def getProjectId: String = projectId
   }
@@ -16,4 +15,5 @@ package object utils {
     val English = "en-EN"
     val Russian = "ru-RU"
   }
+
 }
