@@ -13,9 +13,4 @@ trait IntentHandler {
                         responseTexts: Seq[String],
                         languageCode: LanguageCode): Try[Intent]
 
-  def batchIntentUpload(intentDisplayName: String,
-                        intentActionName: String,
-                        messageText: String,
-                        languageCode: LanguageCode): Try[Intent]
-
 }
