@@ -3,8 +3,10 @@ package artur.dialogflow.services
 import artur.dialogflow.interfaces.IntentHandler
 import artur.dialogflow.utils.Configs
 import artur.dialogflow.utils.LanguageCode.LanguageCode
+import com.google.api.client.json.webtoken.JsonWebToken.Payload
 import com.google.cloud.dialogflow.v2.Intent.{Message, TrainingPhrase}
 import com.google.cloud.dialogflow.v2._
+import com.google.protobuf.{Struct, Value}
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -19,16 +21,21 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
   override def batchIntentUpload(displayName: Option[String],
                                  actionName: Option[String],
                                  trainingPhrases: Option[Seq[String]],
+                                 payload: Option[Map[String, Value]],
                                  responseTexts: Option[Seq[String]],
                                  languageCode: LanguageCode): Try[Intent] = {
-    val responses      = responseTexts.map(createResponses)
-    val trainingParts  = trainingPhrases.map(list => list.map(createTrainingPhrase))
-    val intent: Intent = createIntent(displayName, actionName, responses, trainingParts)
+    val responses       = responseTexts.map(createResponses)
+    val responsePayload = payload.map(generatePayload)
+    val trainingParts   = trainingPhrases.map(list => list.map(createTrainingPhrase))
+    val intent: Intent  = createIntent(displayName, actionName, responses, responsePayload, trainingParts)
 
     Try {
       intentsClient.createIntent(projectAgentName, intent)
     }
   }
+
+  private def generatePayload(payload: Map[String, Value]) =
+    Struct.newBuilder.putAllFields(payload.asJava).build()
 
   private def createResponses(responses: Seq[String]) = responses match {
     case list =>
@@ -49,6 +56,7 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
   private def createIntent(displayName: Option[String],
                            actionName: Option[String],
                            message: Option[Message],
+                           responsePayload: Option[Struct],
                            trainingParts: Option[Seq[TrainingPhrase]]) = {
 
     def addTriggers(intent: Intent.Builder) = trainingParts match {
