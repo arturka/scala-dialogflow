@@ -7,10 +7,10 @@ import scala.util.Try
 
 trait IntentHandler {
 
-  def batchIntentUpload(displayName: String,
-                        actionName: String,
-                        trainingPhrases: Seq[String],
-                        responseTexts: Seq[String],
+  def batchIntentUpload(displayName: Option[String],
+                        actionName: Option[String],
+                        trainingPhrases: Option[Seq[String]],
+                        responseTexts: Option[Seq[String]],
                         languageCode: LanguageCode): Try[Intent]
 
 }
