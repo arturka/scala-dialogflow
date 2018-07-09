@@ -6,6 +6,7 @@ import artur.dialogflow.utils.LanguageCode.LanguageCode
 import com.google.api.client.json.webtoken.JsonWebToken.Payload
 import com.google.cloud.dialogflow.v2.Intent.{Message, TrainingPhrase}
 import com.google.cloud.dialogflow.v2._
+import com.google.protobuf.util.JsonFormat
 import com.google.protobuf.{Struct, Value}
 
 import scala.collection.JavaConverters._
@@ -21,21 +22,23 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
   override def batchIntentUpload(displayName: Option[String],
                                  actionName: Option[String],
                                  trainingPhrases: Option[Seq[String]],
-                                 payload: Option[Map[String, Value]],
+                                 payload: Option[Struct],
                                  responseTexts: Option[Seq[String]],
                                  languageCode: LanguageCode): Try[Intent] = {
     val responses       = responseTexts.map(createResponses)
-    val responsePayload = payload.map(generatePayload)
+    val payloadMessage         = generatePayload(payload)
     val trainingParts   = trainingPhrases.map(list => list.map(createTrainingPhrase))
-    val intent: Intent  = createIntent(displayName, actionName, responses, responsePayload, trainingParts)
+    val intent: Intent  = createIntent(displayName, actionName, responses, payloadMessage, trainingParts)
 
     Try {
       intentsClient.createIntent(projectAgentName, intent)
     }
   }
 
-  private def generatePayload(payload: Map[String, Value]) =
-    Struct.newBuilder.putAllFields(payload.asJava).build()
+  private def generatePayload(payloadOpt: Option[Struct]) = payloadOpt match {
+    case Some(payload) if payload.getFieldsCount > 0 => Some(Message.newBuilder.setPayload(payload).build())
+    case _ => None
+  }
 
   private def createResponses(responses: Seq[String]) = responses match {
     case list =>
@@ -56,7 +59,7 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
   private def createIntent(displayName: Option[String],
                            actionName: Option[String],
                            message: Option[Message],
-                           responsePayload: Option[Struct],
+                           responsePayload: Option[Message],
                            trainingParts: Option[Seq[TrainingPhrase]]) = {
 
     def addTriggers(intent: Intent.Builder) = trainingParts match {
@@ -79,11 +82,17 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
       case _          => intent
     }
 
+    def addResponsePayload(intent: Intent.Builder) = responsePayload match {
+      case Some(payload) => intent.addMessages(payload)
+      case _          => intent
+    }
+
     Some(Intent.newBuilder)
       .map(addDisplayName)
       .map(addAction)
       .map(addMessages)
       .map(addTriggers)
+      .map(addResponsePayload)
       .map(x => x.build())
       .get
   }
