@@ -24,11 +24,13 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
                                  trainingPhrases: Option[Seq[String]],
                                  payload: Option[Struct],
                                  responseTexts: Option[Seq[String]],
-                                 languageCode: LanguageCode): Try[Intent] = {
+                                 languageCode: LanguageCode,
+                                 inputContext: Option[String],
+                                 outputContext: Option[String]): Try[Intent] = {
     val responses       = responseTexts.map(createResponses)
     val payloadMessage         = generatePayload(payload)
     val trainingParts   = trainingPhrases.map(list => list.map(createTrainingPhrase))
-    val intent: Intent  = createIntent(displayName, actionName, responses, payloadMessage, trainingParts)
+    val intent: Intent  = createIntent(displayName, actionName, responses, payloadMessage, trainingParts, inputContext, outputContext)
 
     Try {
       intentsClient.createIntent(projectAgentName, intent)
@@ -60,41 +62,55 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
                            actionName: Option[String],
                            message: Option[Message],
                            responsePayload: Option[Message],
-                           trainingParts: Option[Seq[TrainingPhrase]]) = {
+                           trainingParts: Option[Seq[TrainingPhrase]],
+                           inputContext: Option[String],
+                           outputContext: Option[String]) = {
+    val intent = Intent.newBuilder()
 
-    def addTriggers(intent: Intent.Builder) = trainingParts match {
+    addTriggers()
+    addMessages()
+    addAction()
+    addDisplayName()
+    addResponsePayload()
+    addInputContext()
+    addOutputContext()
+
+    def addTriggers() = trainingParts match {
       case Some(triggers) => intent.addAllTrainingPhrases(triggers.asJava)
-      case _              => intent
+      case _              =>
     }
 
-    def addMessages(intent: Intent.Builder) = message match {
+    def addMessages() = message match {
       case Some(messages) => intent.addMessages(messages)
-      case _              => intent
+      case _              =>
     }
 
-    def addAction(intent: Intent.Builder) = actionName match {
+    def addAction() = actionName match {
       case Some(action) if !action.isEmpty => intent.setAction(action)
-      case _                               => intent
+      case _                               =>
     }
 
-    def addDisplayName(intent: Intent.Builder) = displayName match {
+    def addDisplayName() = displayName match {
       case Some(name) => intent.setDisplayName(name)
-      case _          => intent
+      case _          =>
     }
 
-    def addResponsePayload(intent: Intent.Builder) = responsePayload match {
+    def addResponsePayload() = responsePayload match {
       case Some(payload) => intent.addMessages(payload)
-      case _          => intent
+      case _          =>
     }
 
-    Some(Intent.newBuilder)
-      .map(addDisplayName)
-      .map(addAction)
-      .map(addMessages)
-      .map(addTriggers)
-      .map(addResponsePayload)
-      .map(x => x.build())
-      .get
+    def addInputContext() = inputContext match {
+      case Some(input) => intent.addInputContextNames(input)
+      case _ =>
+    }
+
+    def addOutputContext() = outputContext match {
+      case Some(output) => intent.addOutputContexts(Context.newBuilder.setName(output).setLifespanCount(1).build())
+      case _ =>
+    }
+
+    intent.build()
   }
 
 }

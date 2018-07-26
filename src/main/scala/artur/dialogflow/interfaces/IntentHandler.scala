@@ -14,6 +14,8 @@ trait IntentHandler {
                         trainingPhrases: Option[Seq[String]],
                         payload: Option[Struct],
                         responseTexts: Option[Seq[String]],
-                        languageCode: LanguageCode): Try[Intent]
+                        languageCode: LanguageCode,
+                        inputContext: Option[String],
+                        outputContext: Option[String]): Try[Intent]
 
 }
