@@ -4,7 +4,7 @@ import artur.dialogflow.interfaces.IntentHandler
 import artur.dialogflow.utils.Configs
 import artur.dialogflow.utils.LanguageCode.LanguageCode
 import com.google.api.client.json.webtoken.JsonWebToken.Payload
-import com.google.cloud.dialogflow.v2.Intent.{Message, TrainingPhrase}
+import com.google.cloud.dialogflow.v2.Intent.{FollowupIntentInfo, Message, TrainingPhrase}
 import com.google.cloud.dialogflow.v2._
 import com.google.protobuf.util.JsonFormat
 import com.google.protobuf.{Struct, Value}
@@ -75,38 +75,38 @@ class IntentUploader(configs: Configs, intentsClient: IntentsClient) extends Int
     addInputContext()
     addOutputContext()
 
-    def addTriggers() = trainingParts match {
+    def addTriggers(): Unit = trainingParts match {
       case Some(triggers) => intent.addAllTrainingPhrases(triggers.asJava)
       case _              =>
     }
 
-    def addMessages() = message match {
+    def addMessages(): Unit = message match {
       case Some(messages) => intent.addMessages(messages)
       case _              =>
     }
 
-    def addAction() = actionName match {
+    def addAction(): Unit = actionName match {
       case Some(action) if !action.isEmpty => intent.setAction(action)
       case _                               =>
     }
 
-    def addDisplayName() = displayName match {
+    def addDisplayName(): Unit = displayName match {
       case Some(name) => intent.setDisplayName(name)
       case _          =>
     }
 
-    def addResponsePayload() = responsePayload match {
+    def addResponsePayload(): Unit = responsePayload match {
       case Some(payload) => intent.addMessages(payload)
       case _          =>
     }
 
-    def addInputContext() = inputContext match {
-      case Some(input) => intent.addInputContextNames(input)
+    def addInputContext(): Unit = inputContext match {
+      case Some(input) => intent.setFollowupIntentInfo(0, FollowupIntentInfo.newBuilder.setFollowupIntentName(""))
       case _ =>
     }
 
-    def addOutputContext() = outputContext match {
-      case Some(output) => intent.addOutputContexts(Context.newBuilder.setName(output).setLifespanCount(1).build())
+    def addOutputContext(): Unit = outputContext match {
+      case Some(output) => intent.setParentFollowupIntentName()
       case _ =>
     }
 
